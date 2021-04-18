@@ -33,18 +33,22 @@
   "Remove all display text properties on new lines between min and max"
   (save-excursion
     (goto-char min)
-    (while (re-search-forward "\n" (1+ max) t) ;; was 'move
-      (remove-text-properties (match-beginning 0) (match-end 0) '(display)))))
+    (save-match-data
+      (while (re-search-forward "\n" (1+ max) t)
+        (with-silent-modifications
+          (remove-text-properties (match-beginning 0) (match-end 0) '(display)))))))
 
 (defun phindent-before-region-change ()
   (when mark-active
-	(with-silent-modifications
-	  (phindent-update-between (region-beginning) (region-end) 0))))
+    (with-silent-modifications
+      (phindent-update-between (region-beginning) (region-end) 0))))
 
 (defun phindent-after-region-change ()
-  (when mark-active
-	(with-silent-modifications
-	  (phindent-clean-buffer (region-beginning) (1- (region-end))))))
+  ;; There seems to be a bug in emacs which makes it so that after
+  ;; `kill-ring-save` the mark is considered active even though it is not.
+  (when (and mark-active (not (eq this-command 'kill-ring-save)))
+    (with-silent-modifications
+      (phindent-clean-buffer (region-beginning) (1- (region-end))))))
 
 (defun phindent-buffer (min max)
   "Indent all empty lines in the buffer between min and max"
@@ -54,35 +58,38 @@
 
 (defun phindent-next (max)
   "Indent the next empty line, return t if it worked, nil if we reached max"
-  (when (re-search-forward "\n\\(\n+\\)\\(\t+\\)" max t)
-    (let* ((initial-pos (match-beginning 1))
-           (number-lines (- (match-end 1) initial-pos))
-           (size-indent (- (match-end 2) (match-beginning 2))))
-      (dotimes (pos number-lines)
-        (phindent-by-at size-indent (+ initial-pos pos)))
-      't)))
+  (save-match-data
+    (when (re-search-forward "\n\\(\n+\\)\\(\t+\\)" max t)
+      (let* ((initial-pos (match-beginning 1))
+             (number-lines (- (match-end 1) initial-pos))
+             (size-indent (- (match-end 2) (match-beginning 2))))
+        (dotimes (pos number-lines)
+          (phindent-by-at size-indent (+ initial-pos pos)))
+        't))))
 
 (defun phindent-by-at (size position)
   "Display [size] tabs at the empty line at position [position]"
   (with-silent-modifications
-	(put-text-property position
-					   (+ position 1)
-					   'display
-					   (concat (propertize (make-string size ?\t)
-										   'font-lock-face
-										   'whitespace-tab)
-							   "\n"))))
+    (put-text-property position
+                       (+ position 1)
+                       'display
+                       (concat (propertize (make-string size ?\t)
+                                           'font-lock-face
+                                           'whitespace-tab)
+                               "\n"))))
 
 (defun phindent-get-min (min)
   (save-excursion
-    (goto-char min)
-    (re-search-backward "[^\n\t]" nil 1)
-    (point)))
+    (save-match-data
+      (goto-char min)
+      (re-search-backward "[^\n\t]" nil 1)
+      (point))))
 
 (defun phindent-get-max (max)
   (save-excursion
-    (goto-char max)
-    (re-search-forward "[^\n\t]" nil 1)
-    (point)))
+    (save-match-data
+      (goto-char max)
+      (re-search-forward "[^\n\t]" nil 1)
+      (point))))
 
 (provide 'phindent-mode)
