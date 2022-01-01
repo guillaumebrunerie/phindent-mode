@@ -1,5 +1,6 @@
 ;; phindent-mode.el  Shows phantom indentation in empty lines
 
+;;;###autoload
 (define-minor-mode phindent-mode
   "Toggle Phantom-indent mode, shows indentation in empty lines."
   :lighter    " Phindent"
