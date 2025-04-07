@@ -47,12 +47,12 @@
 (defun phindent-after-region-change ()
   ;; There seems to be a bug in emacs which makes it so that after
   ;; `kill-ring-save` the mark is considered active even though it is not.
-  (when (and mark-active (not (eq this-command 'kill-ring-save)))
+  (when (and mark-active (not (memq this-command '(kill-ring-save))))
     (with-silent-modifications
       (phindent-clean-buffer (region-beginning) (1- (region-end)))))
   ;; Similar issue with `comment-dwim`, except that we need to regenerate
   ;; the text properties in the region
-  (when (eq this-command 'comment-dwim)
+  (when (memq this-command '(comment-dwim ultimate-js--comment-dwim))
     (with-silent-modifications
       (phindent-update-between (region-beginning) (region-end) 0))))
 
